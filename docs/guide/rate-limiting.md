@@ -8,9 +8,6 @@ description: Rate limiting in the AniList GraphQL API.
 ::: warning
 The API is currently in a degraded state and is limited to **30 requests per minute**. 
 This is a temporary measure until the API is fully restored.
-
-This is not currently reflected in the headers. You will notice rate limiting at an `X-RateLimit-Remaining` value of 60
-once you have exceeded the available 30 requests per minute.
 :::
 
 The AniList API has a rate limit of 90 requests per minute.
