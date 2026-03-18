@@ -5,8 +5,10 @@ title: ModActionType Reference
 ### ModActionType
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

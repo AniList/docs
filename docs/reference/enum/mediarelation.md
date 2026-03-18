@@ -6,8 +6,10 @@ title: MediaRelation Reference
 Type of relation media has to its parent.
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

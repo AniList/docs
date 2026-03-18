@@ -30,21 +30,29 @@ represent free-form human-readable text.
 Activity union type
 <table>
 <thead>
+<tr>
 <th align="left">Type</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>
 <td valign="top"><strong><a href="/reference/object/textactivity">TextActivity</a></strong></td>
-<td valign="top">User text activity</td>
+<td valign="top">
+User text activity
+</td>
 </tr>
 <tr>
 <td valign="top"><strong><a href="/reference/object/listactivity">ListActivity</a></strong></td>
-<td valign="top">User list activity (anime & manga updates)</td>
+<td valign="top">
+User list activity (anime & manga updates)
+</td>
 </tr>
 <tr>
 <td valign="top"><strong><a href="/reference/object/messageactivity">MessageActivity</a></strong></td>
-<td valign="top">User message activity</td>
+<td valign="top">
+User message activity
+</td>
 </tr>
 </tbody>
 </table>

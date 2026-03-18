@@ -6,8 +6,10 @@ title: ScoreFormat Reference
 Media list scoring type
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

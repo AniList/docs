@@ -6,8 +6,10 @@ title: StaffLanguage Reference
 The primary language of the voice actor
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

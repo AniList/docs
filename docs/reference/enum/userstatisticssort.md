@@ -6,8 +6,10 @@ title: UserStatisticsSort Reference
 User statistics sort enum
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

@@ -6,8 +6,10 @@ title: NotificationType Reference
 Notification type enum
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>
@@ -110,6 +112,24 @@ Anime or manga entries on the user's list have been merged into a single entry
 <td valign="top"><strong>MEDIA_DELETION</strong></td>
 <td>
 An anime or manga on the user's list has been deleted from the site
+</td>
+</tr>
+<tr>
+<td valign="top"><strong>MEDIA_SUBMISSION_UPDATE</strong></td>
+<td>
+A user's submission has been accepted, partially accepted, or rejected
+</td>
+</tr>
+<tr>
+<td valign="top"><strong>STAFF_SUBMISSION_UPDATE</strong></td>
+<td>
+A user's staff submission has been accepted, partially accepted, or rejected
+</td>
+</tr>
+<tr>
+<td valign="top"><strong>CHARACTER_SUBMISSION_UPDATE</strong></td>
+<td>
+A user's character submission has been accepted, partially accepted, or rejected
 </td>
 </tr>
 </tbody>

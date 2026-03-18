@@ -6,8 +6,10 @@ title: CharacterRole Reference
 The role the character plays in the media
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

@@ -6,8 +6,10 @@ title: MediaListSort Reference
 Media list sort enums
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

@@ -6,8 +6,10 @@ title: MediaFormat Reference
 The format the media was released in
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

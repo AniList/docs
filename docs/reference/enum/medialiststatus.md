@@ -6,8 +6,10 @@ title: MediaListStatus Reference
 Media list watching/reading status enum.
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>

@@ -6,8 +6,10 @@ title: UserTitleLanguage Reference
 The language the user wants to see media titles in
 <table>
 <thead>
+<tr>
 <th align="left">Value</th>
 <th align="left">Description</th>
+</tr>
 </thead>
 <tbody>
 <tr>
