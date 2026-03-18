@@ -99,6 +99,10 @@
         "link": "/reference/object/charactersubmissionedge"
       },
       {
+        "text": "CharacterSubmissionUpdateNotification",
+        "link": "/reference/object/charactersubmissionupdatenotification"
+      },
+      {
         "text": "Deleted",
         "link": "/reference/object/deleted"
       },
@@ -217,6 +221,10 @@
       {
         "text": "MediaSubmissionEdge",
         "link": "/reference/object/mediasubmissionedge"
+      },
+      {
+        "text": "MediaSubmissionUpdateNotification",
+        "link": "/reference/object/mediasubmissionupdatenotification"
       },
       {
         "text": "MediaTag",
@@ -353,6 +361,10 @@
       {
         "text": "StaffSubmission",
         "link": "/reference/object/staffsubmission"
+      },
+      {
+        "text": "StaffSubmissionUpdateNotification",
+        "link": "/reference/object/staffsubmissionupdatenotification"
       },
       {
         "text": "StatusDistribution",

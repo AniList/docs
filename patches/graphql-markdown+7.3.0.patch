@@ -1,0 +1,386 @@
+diff --git a/node_modules/graphql-markdown/README.md b/node_modules/graphql-markdown/README.md
+index 2c279a6..bdb5f23 100644
+--- a/node_modules/graphql-markdown/README.md
++++ b/node_modules/graphql-markdown/README.md
+@@ -20,13 +20,28 @@ $ npm install graphql-markdown --save-dev
+ 
+ **[See an example][example]** generated from the [GraphBrainz][] schema.
+ 
++## Support
++
++Did this project bring you joy? Want to support updates? Check out
++[my GitHub Sponsors page](https://github.com/sponsors/exogen).
++
++Alternatively…
++
++<a href="https://www.buymeacoffee.com/mosswood" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;"></a>
++
+ ## Usage
+ 
+ ### Command Line API
+ 
+-Installing the package adds a `graphql-markdown` script. Point it at a schema
+-and the output will be written to stdout. You must install `graphql` alongside
+-this package according to the
++Installing the package adds a `graphql-markdown` script via the standard package.json
++[`bin`](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#bin) field – see
++npm’s [Executables](https://docs.npmjs.com/cli/v10/configuring-npm/folders#executables)
++documentation to learn where this will be on your system. For local installs,
++this is typically `node_modules/.bin`. When referencing the executable in
++your package.json’s `scripts`, you may simply call `graphql-markdown`.
++
++Point the `graphql-markdown` script at a schema and the output will be written
++to stdout. You must install `graphql` alongside this package according to the
+ [compatible versions specified in `peerDependencies`](./package.json).
+ 
+ The schema may be retrieved from a GraphQL endpoint:
+@@ -82,6 +97,10 @@ Options:
+   --title <string>       Change the top heading title (default: 'Schema Types')
+   --no-title             Do not print a default title
+   --no-toc               Do not print table of contents
++  --toc-fields <list>    Expand the table of contents for the listed types
++                         (comma-separated) to link to fields within those types
++                         (e.g. --toc-fields "Query,Mutation,Subscription") or use
++                         the string "*" to link to fields for all types
+   --prologue <string>    Include custom Markdown after the title
+   --epilogue <string>    Include custom Markdown after everything else
+   --heading-level <num>  Heading level to begin at, useful if you are embedding the
+@@ -120,6 +139,9 @@ with a `__schema` property), render the schema to the console or the provided
+   `console.log`.
+ - **`skipTableOfContents`**: When set, rendering of "Table of contents" section
+   is skipped.
++- **`tocFieldTypes`**: An array of type names whose table of contents entry will
++  be expanded to link to individual fields in a nested list. Include the special
++  name `*` in the array to match all types.
+ - **`headingLevel`**: The initial level at which to render Markdown headings in
+   the output, defaults to 1. Use this if you are using `updateSchema` to embed
+   the output in a larger document with other sections.
+diff --git a/node_modules/graphql-markdown/src/index.js b/node_modules/graphql-markdown/src/index.js
+index 5395f25..99c8b22 100755
+--- a/node_modules/graphql-markdown/src/index.js
++++ b/node_modules/graphql-markdown/src/index.js
+@@ -32,6 +32,10 @@ function printHelp(console) {
+     --title <string>       Change the top heading title (default: 'Schema Types')
+     --no-title             Do not print a default title
+     --no-toc               Do not print table of contents
++    --toc-fields <list>    Expand the table of contents for the listed types
++                           (comma-separated) to link to fields within those types
++                           (e.g. --toc-fields "Query,Mutation,Subscription") or use
++                           the string "*" to link to fields for all types
+     --prologue <string>    Include custom Markdown after the title
+     --epilogue <string>    Include custom Markdown after everything else
+     --heading-level <num>  Heading level to begin at, useful if you are embedding the
+@@ -71,6 +75,9 @@ function run(
+       obj[key] = value.join('=')
+       return obj
+     }, {})
++    const tocFieldTypes = args['toc-fields']
++      ? args['toc-fields'].split(',')
++      : []
+     const loadOptions = { headers }
+     loadSchemaJSON(schemaPath, loadOptions).then((schema) => {
+       const options = {
+@@ -80,6 +87,7 @@ function run(
+         epilogue: args.epilogue,
+         skipTableOfContents: args.toc === false,
+         headingLevel: args['heading-level'],
++        tocFieldTypes,
+       }
+       if (options.title === false) {
+         options.title = ''
+diff --git a/node_modules/graphql-markdown/src/loadSchemaJSON.js b/node_modules/graphql-markdown/src/loadSchemaJSON.js
+index 406c091..533849f 100644
+--- a/node_modules/graphql-markdown/src/loadSchemaJSON.js
++++ b/node_modules/graphql-markdown/src/loadSchemaJSON.js
+@@ -94,7 +94,7 @@ function loadSchemaJSON(schemaPath, loadOptions) {
+   if (schemaPath.indexOf('://') >= 0) {
+     return fetchSchemaJSON(schemaPath, loadOptions)
+   } else if (schemaPath.match(/\.g(raph)?ql$/)) {
+-    return parseSchemaGraphQL(schemaPath).then(schemaToJSON)
++    return parseSchemaGraphQL(schemaPath, loadOptions).then(schemaToJSON)
+   }
+   return requireSchema(schemaPath)
+ }
+diff --git a/node_modules/graphql-markdown/src/renderSchema.js b/node_modules/graphql-markdown/src/renderSchema.js
+index 92c25ac..c3aea96 100644
+--- a/node_modules/graphql-markdown/src/renderSchema.js
++++ b/node_modules/graphql-markdown/src/renderSchema.js
+@@ -26,7 +26,9 @@ function renderObject(type, options) {
+   const printer = options.printer || console.log
+   const headingLevel = options.headingLevel || 1
+   const getTypeURL = options.getTypeURL
++  const getFieldURL = options.getFieldURL
+   const isInputObject = type.kind === 'INPUT_OBJECT'
++  const isInterface = type.kind === 'INTERFACE'
+ 
+   if (!skipTitle) {
+     printer(`\n${'#'.repeat(headingLevel + 2)} ${type.name}\n`)
+@@ -51,13 +53,23 @@ function renderObject(type, options) {
+ 
+   const fields = isInputObject ? type.inputFields : type.fields
+   fields.forEach((field) => {
++    const url = getFieldURL(type, field)
++    const anchor = url && url.split('#')[1]
++    const fieldNameMarkup = anchor
++      ? `<strong id="${anchor}">${field.name}</strong>`
++      : `<strong>${field.name}</strong>`
+     printer('<tr>')
+     printer(
+-      `<td colspan="2" valign="top"><strong>${field.name}</strong>${
++      `<td colspan="2" valign="top">${fieldNameMarkup}${
+         field.isDeprecated ? ' ⚠️' : ''
+       }</td>`
+     )
+-    printer(`<td valign="top">${renderType(field.type, { getTypeURL })}</td>`)
++    printer(
++      `<td valign="top">${renderType(field.type, {
++        getTypeURL,
++        getFieldURL,
++      })}</td>`
++    )
+     if (field.description || field.isDeprecated) {
+       printer('<td>')
+       if (field.description) {
+@@ -80,7 +92,12 @@ function renderObject(type, options) {
+       field.args.forEach((arg, i) => {
+         printer('<tr>')
+         printer(`<td colspan="2" align="right" valign="top">${arg.name}</td>`)
+-        printer(`<td valign="top">${renderType(arg.type, { getTypeURL })}</td>`)
++        printer(
++          `<td valign="top">${renderType(arg.type, {
++            getTypeURL,
++            getFieldURL,
++          })}</td>`
++        )
+         if (arg.description) {
+           printer('<td>')
+           printer(`\n${arg.description}\n`)
+@@ -94,6 +111,14 @@ function renderObject(type, options) {
+   })
+   printer('</tbody>')
+   printer('</table>')
++
++  if (isInterface && type.possibleTypes && type.possibleTypes.length) {
++    printer(
++      `\n**Possible Types:** ${type.possibleTypes
++        .map((type) => `[${type.name}](${getTypeURL(type)})`)
++        .join(', ')}`
++    )
++  }
+ }
+ 
+ function renderSchema(schema, options) {
+@@ -106,6 +131,10 @@ function renderSchema(schema, options) {
+   const printer = options.printer || console.log
+   const headingLevel = options.headingLevel || 1
+   const unknownTypeURL = options.unknownTypeURL
++  const tocFieldTypes = options.tocFieldTypes || []
++  const tocFieldAllTypes = tocFieldTypes.includes('*')
++  const typeUrl = options.typeUrl;
++
+ 
+   if (schema.__schema) {
+     schema = schema.__schema
+@@ -115,7 +144,8 @@ function renderSchema(schema, options) {
+   const typeMap = schema.types.reduce((typeMap, type) => {
+     return Object.assign(typeMap, { [type.name]: type })
+   }, {})
+-  const getTypeURL = (type) => {
++
++  const getTypeURL = typeUrl ? typeUrl : (type) => {
+     const url = `#${type.name.toLowerCase()}`
+     if (typeMap[type.name]) {
+       return url
+@@ -126,14 +156,28 @@ function renderSchema(schema, options) {
+     }
+   }
+ 
++  const getFieldURL = (type, field) => {
++    const url = getTypeURL(type)
++    return url && `${url}.${field.name.toLowerCase()}`
++  }
++
+   const queryType = schema.queryType
+   const query =
+     queryType && types.find((type) => type.name === schema.queryType.name)
+   const mutationType = schema.mutationType
+   const mutation =
+     mutationType && types.find((type) => type.name === schema.mutationType.name)
++  const subscriptionType = schema.subscriptionType
++  const subscription =
++    subscriptionType &&
++    types.find((type) => type.name === schema.subscriptionType.name)
++
+   const objects = types.filter(
+-    (type) => type.kind === 'OBJECT' && type !== query && type !== mutation
++    (type) =>
++      type.kind === 'OBJECT' &&
++      type !== query &&
++      type !== mutation &&
++      type !== subscription
+   )
+   const inputs = types.filter((type) => type.kind === 'INPUT_OBJECT')
+   const enums = types.filter((type) => type.kind === 'ENUM')
+@@ -161,20 +205,48 @@ function renderSchema(schema, options) {
+     printer('  <summary><strong>Table of Contents</strong></summary>\n')
+     if (query) {
+       printer('  * [Query](#query)')
++      if (tocFieldAllTypes || tocFieldTypes.includes(query.name)) {
++        query.fields.forEach((field) => {
++          printer(`    * [${field.name}](${getFieldURL(query, field)})`)
++        })
++      }
+     }
+     if (mutation) {
+       printer('  * [Mutation](#mutation)')
++      if (tocFieldAllTypes || tocFieldTypes.includes(mutation.name)) {
++        mutation.fields.forEach((field) => {
++          printer(`    * [${field.name}](${getFieldURL(mutation, field)})`)
++        })
++      }
++    }
++    if (subscription) {
++      printer('  * [Subscription](#subscription)')
++      if (tocFieldAllTypes || tocFieldTypes.includes(subscription.name)) {
++        subscription.fields.forEach((field) => {
++          printer(`    * [${field.name}](${getFieldURL(subscription, field)})`)
++        })
++      }
+     }
+     if (objects.length) {
+       printer('  * [Objects](#objects)')
+       objects.forEach((type) => {
+         printer(`    * [${type.name}](#${type.name.toLowerCase()})`)
++        if (tocFieldAllTypes || tocFieldTypes.includes(type.name)) {
++          type.fields.forEach((field) => {
++            printer(`      * [${field.name}](${getFieldURL(type, field)})`)
++          })
++        }
+       })
+     }
+     if (inputs.length) {
+       printer('  * [Inputs](#inputs)')
+       inputs.forEach((type) => {
+         printer(`    * [${type.name}](#${type.name.toLowerCase()})`)
++        if (tocFieldAllTypes || tocFieldTypes.includes(type.name)) {
++          type.inputFields.forEach((field) => {
++            printer(`      * [${field.name}](${getFieldURL(type, field)})`)
++          })
++        }
+       })
+     }
+     if (enums.length) {
+@@ -193,6 +265,11 @@ function renderSchema(schema, options) {
+       printer('  * [Interfaces](#interfaces)')
+       interfaces.forEach((type) => {
+         printer(`    * [${type.name}](#${type.name.toLowerCase()})`)
++        if (tocFieldAllTypes || tocFieldTypes.includes(type.name)) {
++          type.fields.forEach((field) => {
++            printer(`      * [${field.name}](${getFieldURL(type, field)})`)
++          })
++        }
+       })
+     }
+     if (unions.length) {
+@@ -210,7 +287,13 @@ function renderSchema(schema, options) {
+         query.name === 'Query' ? '' : ' (' + query.name + ')'
+       }`
+     )
+-    renderObject(query, { skipTitle: true, headingLevel, printer, getTypeURL })
++    renderObject(query, {
++      skipTitle: true,
++      headingLevel,
++      printer,
++      getTypeURL,
++      getFieldURL,
++    })
+   }
+ 
+   if (mutation) {
+@@ -224,20 +307,38 @@ function renderSchema(schema, options) {
+       headingLevel,
+       printer,
+       getTypeURL,
++      getFieldURL,
++    })
++  }
++
++  if (subscription) {
++    printer(
++      `\n${'#'.repeat(headingLevel + 1)} Subscription${
++        subscription.name === 'Subscription'
++          ? ''
++          : ' (' + subscription.name + ')'
++      }`
++    )
++    renderObject(subscription, {
++      skipTitle: true,
++      headingLevel,
++      printer,
++      getTypeURL,
++      getFieldURL,
+     })
+   }
+ 
+   if (objects.length) {
+     printer(`\n${'#'.repeat(headingLevel + 1)} Objects`)
+     objects.forEach((type) =>
+-      renderObject(type, { headingLevel, printer, getTypeURL })
++      renderObject(type, { headingLevel, printer, getTypeURL, getFieldURL })
+     )
+   }
+ 
+   if (inputs.length) {
+     printer(`\n${'#'.repeat(headingLevel + 1)} Inputs`)
+     inputs.forEach((type) =>
+-      renderObject(type, { headingLevel, printer, getTypeURL })
++      renderObject(type, { headingLevel, printer, getTypeURL, getFieldURL })
+     )
+   }
+ 
+@@ -250,8 +351,10 @@ function renderSchema(schema, options) {
+       }
+       printer('<table>')
+       printer('<thead>')
++      printer('<tr>')
+       printer('<th align="left">Value</th>')
+       printer('<th align="left">Description</th>')
++      printer('</tr>')
+       printer('</thead>')
+       printer('<tbody>')
+       type.enumValues.forEach((value) => {
+@@ -298,7 +401,7 @@ function renderSchema(schema, options) {
+   if (interfaces.length) {
+     printer(`\n${'#'.repeat(headingLevel + 1)} Interfaces\n`)
+     interfaces.forEach((type) =>
+-      renderObject(type, { headingLevel, printer, getTypeURL })
++      renderObject(type, { headingLevel, printer, getTypeURL, getFieldURL })
+     )
+   }
+ 
+@@ -311,8 +414,10 @@ function renderSchema(schema, options) {
+       }
+       printer('<table>')
+       printer('<thead>')
++      printer('<tr>')
+       printer('<th align="left">Type</th>')
+       printer('<th align="left">Description</th>')
++      printer('</tr>')
+       printer('</thead>')
+       printer('<tbody>')
+       type.possibleTypes.forEach((objType) => {
+@@ -322,10 +427,13 @@ function renderSchema(schema, options) {
+         printer(
+           `<td valign="top"><strong>${renderType(objType, {
+             getTypeURL,
++            getFieldURL,
+           })}</strong></td>`
+         )
+         if (desc) {
+-          printer(`<td valign="top">${desc}</td>`)
++          printer('<td valign="top">')
++          printer(`\n${desc}\n`)
++          printer('</td>')
+         } else {
+           printer('<td></td>')
+         }
